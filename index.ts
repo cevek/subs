@@ -1,6 +1,27 @@
 import {readFileSync, writeFileSync} from 'fs';
-const ensrt = readFileSync('./en.srt', 'utf-8');
-const rusrt = readFileSync('./ru.srt', 'utf-8');
+const argv = require('minimist')(process.argv.slice(2));
+if (!argv.en && !argv.ru) {
+    console.log('Usage: mergesub --en en.srt --ru ru.srt');
+    process.exit();
+}
+
+if (!argv.en) {
+    console.error('no en srt file specified');
+    process.exit();
+}
+if (!argv.ru) {
+    console.error('no ru srt file specified');
+    process.exit();
+}
+let ensrt = '';
+let rusrt = '';
+try {
+    ensrt = readFileSync(argv.en, 'utf-8');
+    rusrt = readFileSync(argv.ru, 'utf-8');
+} catch (e) {
+    console.error(e);
+    process.exit();
+}
 type Maybe<T> = T | null | undefined;
 interface Srt {
     start: number;
@@ -14,7 +35,7 @@ interface MergedSub {
     ruSubs: Srt[];
 }
 function parseSrc(srt: string) {
-    const re = /\d+\s+(\d+):(\d+):(\d+)[.,](\d+) --> (\d+):(\d+):(\d+)[,.](\d+)\s+([\s\S]*?)(?=\n\n\d+|\s*$)/g;
+    const re = /\d+\s+(\d+):(\d+):(\d+)[.,](\d+) --> (\d+):(\d+):(\d+)[,.](\d+)\s+([\s\S]*?)(?=\r?\n\r?\n\d+|\s*$)/g;
     let result: Srt[] = [];
     let res;
     while (res = re.exec(srt)) {
@@ -81,7 +102,7 @@ function merge(en: Srt[], ru: Srt[], ruShift: number) {
     }
     // console.log(ru);
     // console.log(ru);
-    console.log(`Non merged count: ${ru.length}`);
+    console.log(`Skipped count: ${ru.length}`);
     return resultSub;
 }
 function countNonOverlapped(en: Srt[], ru: Srt[], ruShift: number) {
@@ -175,11 +196,12 @@ function findShift(en: Srt[], ru: Srt[]) {
     }
 }
 let shift = 0; //findShift(en, ru);
-console.log(`shift: ${shift}`);
+console.log(`Shift: ${shift}`);
 const merged = merge(en, ru, shift);
 // console.dir(merged, {depth: Infinity});
 const srt = buildMergedSrt(merged);
-writeFileSync('/Users/cody/Downloads/merged.srt', srt);
+writeFileSync(process.cwd() + '/merged.srt', srt);
+console.log(process.cwd() + '/merged.srt');
 
 
 function formatSrtTime(time: number) {
